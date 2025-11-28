@@ -38,6 +38,7 @@ const ball = {
 let playing = false;
 let lastTime = 0;
 const score = { left: 0, right: 0 };
+const activePointers = { left: null, right: null };
 
 function createImage(src) {
   const img = new Image();
@@ -238,6 +239,53 @@ function setupControls() {
   resetBtn.addEventListener('click', () => {
     resetGame(true);
   });
+
+  canvas.addEventListener('pointerdown', (event) => {
+    const side = pointerSide(event);
+    activePointers[side] = event.pointerId;
+    canvas.setPointerCapture(event.pointerId);
+    movePaddleToPointer(side, event);
+    if (!playing) {
+      playing = true;
+      toggleBtn.textContent = 'Pause';
+      if (ball.dx === 0 && ball.dy === 0) {
+        serveBall();
+      }
+      setStatus('Touch controls enabled—keep the Poké Ball moving!');
+    }
+  });
+
+  canvas.addEventListener('pointermove', (event) => {
+    const side = pointerSide(event);
+    if (activePointers[side] === event.pointerId) {
+      movePaddleToPointer(side, event);
+    }
+  });
+
+  const clearPointer = (event) => {
+    if (activePointers.left === event.pointerId) activePointers.left = null;
+    if (activePointers.right === event.pointerId) activePointers.right = null;
+  };
+
+  canvas.addEventListener('pointerup', clearPointer);
+  canvas.addEventListener('pointercancel', clearPointer);
+}
+
+function pointerSide(event) {
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  return x < rect.width / 2 ? 'left' : 'right';
+}
+
+function movePaddleToPointer(side, event) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleY = COURT.height / rect.height;
+  const y = (event.clientY - rect.top) * scaleY - paddleSize.height / 2;
+  paddles[side].y = clamp(
+    y,
+    COURT.padding,
+    COURT.height - paddleSize.height - COURT.padding
+  );
 }
 
 allAssetsLoaded()
