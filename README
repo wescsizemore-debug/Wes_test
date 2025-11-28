@@ -1,2 +1,8 @@
 # Wes_test
 First test repo for learning Codex.
+
+## How to commit changes
+1. Check what is different with `git status`.
+2. Stage your updates, for example `git add index.html main.js README`.
+3. Create the commit with a clear message: `git commit -m "Describe your change"`.
+4. Verify the history with `git log --oneline` before pushing to the remote.
