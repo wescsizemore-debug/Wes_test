@@ -39,6 +39,7 @@ let playing = false;
 let lastTime = 0;
 const score = { left: 0, right: 0 };
 const activePointers = { left: null, right: null };
+let gameOver = false;
 
 function createImage(src) {
   const img = new Image();
@@ -60,6 +61,13 @@ function serveBall() {
   ball.y = COURT.height / 2;
 }
 
+function centerBall() {
+  ball.x = COURT.width / 2;
+  ball.y = COURT.height / 2;
+  ball.dx = 0;
+  ball.dy = 0;
+}
+
 function updateScoreboard() {
   scoreboardEl.textContent = `${score.left} ❖ ${score.right}`;
 }
@@ -70,13 +78,16 @@ function setStatus(message) {
 
 function resetGame(fullReset = false) {
   ball.speed = 260;
-  serveBall();
+  gameOver = false;
+  centerBall();
   playing = !fullReset;
   if (fullReset) {
     score.left = 0;
     score.right = 0;
-    setStatus('Scores cleared. Press Start to play!');
+    setStatus('Scores cleared. Press Start or Space to play!');
     toggleBtn.textContent = 'Start';
+  } else if (playing) {
+    serveBall();
   }
   updateScoreboard();
 }
@@ -145,11 +156,33 @@ function pointOver(message) {
   if (score.left >= TARGET_SCORE || score.right >= TARGET_SCORE) {
     playing = false;
     toggleBtn.textContent = 'Start';
+    gameOver = true;
+    centerBall();
     setStatus(`${message} Victory! Press Start for a rematch.`);
   } else {
     setStatus(`${message} Rally again!`);
     serveBall();
   }
+}
+
+function toggleGame() {
+  if (gameOver) {
+    resetGame(true);
+    playing = true;
+    toggleBtn.textContent = 'Pause';
+    serveBall();
+    setStatus('New match! Keep the Poké Ball moving.');
+    return;
+  }
+
+  playing = !playing;
+  toggleBtn.textContent = playing ? 'Pause' : 'Start';
+
+  if (playing && ball.dx === 0 && ball.dy === 0) {
+    serveBall();
+  }
+
+  setStatus(playing ? 'Battle on! Keep the Poké Ball moving.' : 'Game paused.');
 }
 
 function intersects(circle, rect) {
@@ -220,21 +253,21 @@ function allAssetsLoaded() {
 
 function setupControls() {
   window.addEventListener('keydown', (event) => {
-    if (event.key in keys) keys[event.key] = true;
+    if (event.key in keys) {
+      event.preventDefault();
+      keys[event.key] = true;
+    }
+    if (event.code === 'Space' || event.key === 'Enter') {
+      event.preventDefault();
+      toggleGame();
+    }
   });
 
   window.addEventListener('keyup', (event) => {
     if (event.key in keys) keys[event.key] = false;
   });
 
-  toggleBtn.addEventListener('click', () => {
-    playing = !playing;
-    toggleBtn.textContent = playing ? 'Pause' : 'Start';
-    if (playing && ball.dx === 0 && ball.dy === 0) {
-      serveBall();
-    }
-    setStatus(playing ? 'Battle on! Keep the Poké Ball moving.' : 'Game paused.');
-  });
+  toggleBtn.addEventListener('click', toggleGame);
 
   resetBtn.addEventListener('click', () => {
     resetGame(true);
@@ -245,7 +278,10 @@ function setupControls() {
     activePointers[side] = event.pointerId;
     canvas.setPointerCapture(event.pointerId);
     movePaddleToPointer(side, event);
-    if (!playing) {
+    if (!playing || gameOver) {
+      if (gameOver) {
+        resetGame(true);
+      }
       playing = true;
       toggleBtn.textContent = 'Pause';
       if (ball.dx === 0 && ball.dy === 0) {
